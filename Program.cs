@@ -47,14 +47,26 @@ namespace CarChecker
                 }
                 else
                 {
+                    Console.WriteLine($"Page {pageCounter} has been reached. End of pages.");
                     break;
                 }
 
                 pageCounter++;
             } while (next != null);
 
+            Console.WriteLine($"List of {carList.Count} cars was prepared.");
+
+            string filePath = "C:\\Users\\karlo\\Desktop\\Car checker\\CarList.xlsx";
+
+            //TODO: Continue from here
+            if (File.Exists(filePath))
+            {
+
+            }
             ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
             ExcelPackage excel = new ExcelPackage();
+
+
             var ws = excel.Workbook.Worksheets.Add(DateTime.Now.ToString("MM/dd/yyyy HH:mm"));
 
             //Create excel file header row based on Car class public properties
@@ -77,13 +89,19 @@ namespace CarChecker
                 ws.Cells[t + 1, 7].Value = carList[t].Price;
             }
 
-            string filePath = "C:\\Users\\karlo\\Desktop\\Car checker\\CarList.xlsx";
+            //This goes up
+            if (File.Exists(filePath))
+            {
+                excel = new ExcelPackage(filePath);
 
+            }
+            else
+            {
+                FileStream fileStream = File.Create(filePath);
+                fileStream.Close();
 
-            FileStream fileStream = File.Create(filePath);
-            fileStream.Close();
-
-            File.WriteAllBytes(filePath, excel.GetAsByteArray());
+                File.WriteAllBytes(filePath, excel.GetAsByteArray());
+            }
 
             excel.Dispose();
 
