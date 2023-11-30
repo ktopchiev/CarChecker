@@ -13,54 +13,8 @@ namespace CarChecker
     {
         static void Main(string[] args)
         {
-            HtmlWeb web = new HtmlWeb();
-            var carList = new List<Car>();
-            HtmlNode next;
-            var pageCounter = 1;
 
-            do
-            {
-                HtmlDocument doc = web.Load("https://selection.renault.bg/" + "?page=" + pageCounter);
-                var itemLinks = doc.DocumentNode.SelectNodes("//a[@class='itemLink']");
-                next = doc.DocumentNode.SelectSingleNode("//a[@aria-label='Next']");
-
-                if(itemLinks != null)
-                {
-                    foreach (var item in itemLinks)
-                    {
-                        var id = item.GetAttributeValue("href", "").Split("=", StringSplitOptions.RemoveEmptyEntries)[1].ToString().Trim();
-                        var caption1 = item.ChildNodes.First(i => i.HasClass("caption1"));
-                        var caption2 = item.ChildNodes.First(i => i.HasClass("caption2"));
-                        var caption2a = item.ChildNodes.First(i => i.HasClass("caption2a")).InnerText.Split(" | ", StringSplitOptions.RemoveEmptyEntries);
-                        var price = item.ChildNodes.First(i => i.HasClass("price"));
-                        var url = item.GetAttributeValue("href", "").ToString().Trim();
-
-                        
-
-                        carList.Add(new Car
-                        {
-                            Id = id,
-                            Title = caption1.InnerText,
-                            Description = caption2.InnerText,
-                            AssemblyYear = caption2a[0],
-                            Kilometers = int.Parse(caption2a[1].Replace("км","").Trim().Replace(" ", "")),
-                            FuelType = caption2a[2],
-                            Price = double.Parse(price.InnerText.Replace("лв.","").Trim().Replace(" ","")),
-                            Url = url
-                        });
-                    }
-                }
-                else
-                {
-                    Console.WriteLine($"Page {pageCounter} has been reached. End of pages.");
-                    break;
-                }
-
-                pageCounter++;
-
-            } while (next != null);
-
-            Console.WriteLine($"List of {carList.Count} cars has been prepared.");
+            var carList = GetCarsToList();
 
             string filePath = "C:\\Users\\karlo\\Desktop\\Car checker\\CarList.xlsx";
 
@@ -68,7 +22,6 @@ namespace CarChecker
             ExcelPackage excel;
             ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
 
-            //TODO: Continue from here
             if (!File.Exists(filePath))
             {
                 excel = new ExcelPackage();
@@ -100,6 +53,58 @@ namespace CarChecker
 
             excel.Dispose();
             Console.WriteLine("All done.");
+        }
+
+        public static List<Car> GetCarsToList()
+        {
+            HtmlWeb web = new HtmlWeb();
+            HtmlNode next;
+            var carList = new List<Car>();
+            var pageCounter = 1;
+
+            do
+            {
+                HtmlDocument doc = web.Load("https://selection.renault.bg/" + "?page=" + pageCounter);
+                var itemLinks = doc.DocumentNode.SelectNodes("//a[@class='itemLink']");
+                next = doc.DocumentNode.SelectSingleNode("//a[@aria-label='Next']");
+
+                if (itemLinks != null)
+                {
+                    foreach (var item in itemLinks)
+                    {
+                        var id = item.GetAttributeValue("href", "").Split("=", StringSplitOptions.RemoveEmptyEntries)[1].ToString().Trim();
+                        var caption1 = item.ChildNodes.First(i => i.HasClass("caption1"));
+                        var caption2 = item.ChildNodes.First(i => i.HasClass("caption2"));
+                        var caption2a = item.ChildNodes.First(i => i.HasClass("caption2a")).InnerText.Split(" | ", StringSplitOptions.RemoveEmptyEntries);
+                        var price = item.ChildNodes.First(i => i.HasClass("price"));
+                        var url = item.GetAttributeValue("href", "").ToString().Trim();
+
+                        carList.Add(new Car
+                        {
+                            Id = id,
+                            Title = caption1.InnerText,
+                            Description = caption2.InnerText,
+                            AssemblyYear = caption2a[0],
+                            Kilometers = int.Parse(caption2a[1].Replace("км", "").Trim().Replace(" ", "")),
+                            FuelType = caption2a[2],
+                            Price = double.Parse(price.InnerText.Replace("лв.", "").Trim().Replace(" ", "")),
+                            Url = url
+                        });
+                    }
+                }
+                else
+                {
+                    Console.WriteLine($"Page {pageCounter} has been reached. End of pages.");
+                    break;
+                }
+
+                pageCounter++;
+
+            } while (next != null);
+
+            Console.WriteLine($"List of {carList.Count} cars has been prepared.");
+
+            return carList;
         }
 
         public static void AddListDataToSheet(ExcelWorksheet ws, List<Car> carList)
