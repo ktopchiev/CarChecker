@@ -14,7 +14,7 @@ namespace CarChecker
         static void Main(string[] args)
         {
 
-            var carList = GetCarsToList();
+            List<Car> carList = GetCarsToList();
 
             string filePath = "C:\\Users\\karlo\\Desktop\\Car checker\\CarList.xlsx";
 
@@ -32,7 +32,7 @@ namespace CarChecker
                 excel = new ExcelPackage(filePath);
             }
 
-            var today = DateTime.Now.ToString("ddMMyyyy");
+            string today = DateTime.Now.ToString("ddMMyyyy");
 
             if (!excel.Workbook.Worksheets.Any(s => s.Name == today))
             {
@@ -50,6 +50,8 @@ namespace CarChecker
             FileStream fileStream = File.Create(filePath);
             fileStream.Close();
             File.WriteAllBytes(filePath, excel.GetAsByteArray());
+
+            var newCars = GetNewCars(excel);
 
             excel.Dispose();
             Console.WriteLine("All done.");
@@ -133,6 +135,38 @@ namespace CarChecker
             {
                 ws.Cells[1, p + 1].Value = props[p].Name;
             }
+        }
+
+        public static Dictionary<string,string> GetNewCars(ExcelPackage excel)
+        {
+            Dictionary<string, string> newCars = new Dictionary<string, string>();
+
+            var sheets = excel.Workbook.Worksheets.Select(ws => ws.Name).ToList();
+            sheets.Sort();
+
+            //Always keep two worksheets, before - after
+            if (sheets.Count == 3)
+            {
+                var wsToDel = sheets[0];
+                excel.Workbook.Worksheets.Delete(wsToDel);
+            }
+
+            var lastWs = excel.Workbook.Worksheets[sheets[2]];
+            var prevWs = excel.Workbook.Worksheets[sheets[1]];
+
+            for(var r = 1; r < lastWs.Rows.Count(); r++)
+            {
+                string id = lastWs.Cells[r, 1].Value.ToString();
+
+                bool idExist = lastWs.SelectedRange["A:A"].Any(c => c.Value == id);
+
+                if (!idExist)
+                {
+                    newCars.Add(lastWs.Cells[r, 2].Value.ToString(), lastWs.Cells[r, 8].Value.ToString());
+                }
+            }
+
+            return newCars;
         }
 
         public class Car
