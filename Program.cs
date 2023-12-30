@@ -1,6 +1,5 @@
 ﻿using HtmlAgilityPack;
 using OfficeOpenXml;
-using System.Net.Mail;
 
 namespace CarChecker
 {
@@ -11,6 +10,7 @@ namespace CarChecker
 
             List<Car> carList = GetCarsToList();
 
+            //Set output file
             string filePath = "C:\\Users\\karlo\\Desktop\\Car checker\\CarList.xlsx";
 
             ExcelWorksheet ws;
@@ -52,7 +52,7 @@ namespace CarChecker
             {
                 ExcelWorksheet resWs;
 
-                //SendMailWithNewCars(newCars, "karlostopchiev@gmail.com");
+                
                 if (!excel.Workbook.Worksheets.Any(s => s.Name == "Result"))
                 {
                      resWs = excel.Workbook.Worksheets.Add("Result");
@@ -169,7 +169,6 @@ namespace CarChecker
             List<Car> newCars = new List<Car>();
 
             var sheets = excel.Workbook.Worksheets.Select(s => s.Name).ToList();
-            //sheets.Sort();
 
             //Always keep two worksheets, before - after
             if (sheets.Count > 3)
@@ -204,18 +203,6 @@ namespace CarChecker
             }
             Console.WriteLine($"{counter} cars added to sheet Result.");
             return newCars;
-        }
-
-        public class Car
-        {
-            public string Id { get; set; }
-            public string Title { get; set; }
-            public string Description { get; set; }
-            public string AssemblyYear { get; set; }
-            public int Kilometers { get; set; }
-            public string FuelType { get; set; }
-            public double Price { get; set; }
-            public string Url { get; set; }
         }
     }
 }
