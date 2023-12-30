@@ -1,11 +1,6 @@
-﻿using System.IO;
-using HtmlAgilityPack;
-using System.Collections.Generic;
-using System.Globalization;
+﻿using HtmlAgilityPack;
 using OfficeOpenXml;
-using OfficeOpenXml.Style;
-using System.Security.Cryptography.X509Certificates;
-using System.Diagnostics;
+using System.Net.Mail;
 
 namespace CarChecker
 {
@@ -25,6 +20,8 @@ namespace CarChecker
             if (!File.Exists(filePath))
             {
                 excel = new ExcelPackage();
+                FileStream fileStream = File.Create(filePath);
+                fileStream.Close();
                 Console.WriteLine("New xlsx file with name CarList has been created.");
             }
             else
@@ -32,7 +29,7 @@ namespace CarChecker
                 excel = new ExcelPackage(filePath);
             }
 
-            string today = DateTime.Now.ToString("ddMMyyyy");
+            string today = DateTime.Now.ToString("dd.MM.yyyy");
 
             if (!excel.Workbook.Worksheets.Any(s => s.Name == today))
             {
@@ -46,12 +43,29 @@ namespace CarChecker
             }
 
             AddListDataToSheet(ws, carList);
-
-            FileStream fileStream = File.Create(filePath);
-            fileStream.Close();
             File.WriteAllBytes(filePath, excel.GetAsByteArray());
 
-            var newCars = GetNewCars(excel);
+            //Add new cars to sheet Result
+            var newCars = GetNewCars(excel, carList);
+
+            if (newCars.Count > 0 && newCars != null)
+            {
+                ExcelWorksheet resWs;
+
+                //SendMailWithNewCars(newCars, "karlostopchiev@gmail.com");
+                if (!excel.Workbook.Worksheets.Any(s => s.Name == "Result"))
+                {
+                     resWs = excel.Workbook.Worksheets.Add("Result");
+                }
+                else
+                {
+                    resWs = excel.Workbook.Worksheets["Result"];
+                }
+
+                AddResultToSheet(resWs, newCars);
+                File.WriteAllBytes(filePath, excel.GetAsByteArray());
+
+            }
 
             excel.Dispose();
             Console.WriteLine("All done.");
@@ -109,20 +123,33 @@ namespace CarChecker
             return carList;
         }
 
+        public static void AddResultToSheet(ExcelWorksheet ws, List<Car> newCars)
+        {
+            //Add headings
+            CreateHeaderRow(ws);
+
+            AddListDataToSheet(ws, newCars);
+        }
+
         public static void AddListDataToSheet(ExcelWorksheet ws, List<Car> carList)
         {
+            var props = typeof(Car).GetProperties();
+
             //Add data
             for (int t = 1; t <= carList.Count; t++)
             {
-                ws.Cells[t + 1, 1].Value = carList[t-1].Id;
-                ws.Cells[t + 1, 2].Value = carList[t-1].Title;
-                ws.Cells[t + 1, 3].Value = carList[t-1].Description;
-                ws.Cells[t + 1, 4].Value = carList[t-1].AssemblyYear;
-                ws.Cells[t + 1, 5].Value = carList[t-1].Kilometers;
-                ws.Cells[t + 1, 6].Value = carList[t-1].FuelType;
-                ws.Cells[t + 1, 7].Value = carList[t-1].Price;
-                ws.Cells[t + 1, 8].Value = carList[t-1].Url;
+                
+                ws.Cells[t + 1, 1].Value = carList[t - 1].Id;
+                ws.Cells[t + 1, 2].Value = carList[t - 1].Title;
+                ws.Cells[t + 1, 3].Value = carList[t - 1].Description;
+                ws.Cells[t + 1, 4].Value = carList[t - 1].AssemblyYear;
+                ws.Cells[t + 1, 5].Value = carList[t - 1].Kilometers;
+                ws.Cells[t + 1, 6].Value = carList[t - 1].FuelType;
+                ws.Cells[t + 1, 7].Value = carList[t - 1].Price;
+                ws.Cells[t + 1, 8].Value = carList[t - 1].Url;
+             
             }
+
             Console.WriteLine($"Cars data was successfuly written in sheet {ws.Name}.");
         }
 
@@ -137,35 +164,45 @@ namespace CarChecker
             }
         }
 
-        public static Dictionary<string,string> GetNewCars(ExcelPackage excel)
+        public static List<Car> GetNewCars(ExcelPackage excel, List<Car> carList)
         {
-            Dictionary<string, string> newCars = new Dictionary<string, string>();
+            List<Car> newCars = new List<Car>();
 
-            var sheets = excel.Workbook.Worksheets.Select(ws => ws.Name).ToList();
-            sheets.Sort();
+            var sheets = excel.Workbook.Worksheets.Select(s => s.Name).ToList();
+            //sheets.Sort();
 
             //Always keep two worksheets, before - after
-            if (sheets.Count == 3)
+            if (sheets.Count > 3)
             {
                 var wsToDel = sheets[0];
                 excel.Workbook.Worksheets.Delete(wsToDel);
             }
 
-            var lastWs = excel.Workbook.Worksheets[sheets[2]];
-            var prevWs = excel.Workbook.Worksheets[sheets[1]];
-
-            for(var r = 1; r < lastWs.Rows.Count(); r++)
+            if(sheets.Count > 1)
             {
-                string id = lastWs.Cells[r, 1].Value.ToString();
-
-                bool idExist = lastWs.SelectedRange["A:A"].Any(c => c.Value == id);
-
-                if (!idExist)
-                {
-                    newCars.Add(lastWs.Cells[r, 2].Value.ToString(), lastWs.Cells[r, 8].Value.ToString());
-                }
+                var lastWs = excel.Workbook.Worksheets[sheets[1]];
             }
 
+            var prevWs = excel.Workbook.Worksheets[sheets[0]];
+
+            var counter = 0;
+
+            for(var c = 0; c < carList.Count; c++)
+            {
+                string id = carList[c].Id;
+
+                Console.WriteLine($"Check if {id} exists in older sheet.");
+
+                for (int i = 1; i <= prevWs.Dimension.End.Row; i++)
+                {
+                    if (carList[c].Id == prevWs.Cells[i,1].Value)
+                    {
+                        newCars.Add(carList[c]);
+                        counter++;
+                    }
+                }
+            }
+            Console.WriteLine($"{counter} cars added to sheet Result.");
             return newCars;
         }
 
