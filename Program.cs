@@ -166,6 +166,8 @@ namespace CarChecker
 
         public static List<Car> GetNewCars(ExcelPackage excel, List<Car> carList)
         {
+            //This method compares old and new data and write list of new cars to sheet Result
+
             List<Car> newCars = new List<Car>();
 
             var sheets = excel.Workbook.Worksheets.Select(s => s.Name).ToList();
@@ -198,7 +200,13 @@ namespace CarChecker
                     {
                         newCars.Add(carList[c]);
                         counter++;
+                        Console.WriteLine($"{id} is new. Its been written in sheet Result.");
                     }
+                }
+
+                if (newCars.First(c => c.Id == id) == null)
+                {
+                    Console.WriteLine($"{id} already exist.");
                 }
             }
             Console.WriteLine($"{counter} cars added to sheet Result.");
